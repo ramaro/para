@@ -1,0 +1,12 @@
+para spawns n number of processes (set by $MAXPROCESS) in the background. Blocks until a process is done and continues to loop.
+
+Set $MAXPROCESS to 0 for debugging (does not execute).
+
+Installing: cp para.py ~/bin/para ; chmod u+x ~/bin/para
+
+Example: para %i in one two three four do: "echo %i" 
+
+
+TODO: write more examples, timings, write trap code
+
+

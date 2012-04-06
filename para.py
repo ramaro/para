@@ -8,7 +8,7 @@ import multiprocessing
 """
 para spawns n number of processes (set by $MAXPROCESS) in the background. Blocks until a process is done and continues to loop.
 
-author: ricardo.amaro@gmail.com
+author: https://github.com/ramaro/
 """
 
 def do_it(what):
