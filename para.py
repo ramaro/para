@@ -4,55 +4,66 @@ import sys
 import os
 import subprocess
 import multiprocessing
+import re
 
 """
-para spawns n number of processes (set by $MAXPROCESS) in the background. Blocks until a process is done and continues to loop.
+Para is a parallel for loop.
 
+Para spawns n number of processes (set by $MAXPROCESS) in the background. 
+Blocks until a process is done and continues to loop.
+
+license: BSD 
 author: https://github.com/ramaro/
 """
 
+in_expr = re.compile(r'(%\w+)\s+in\s+([\S+\s*]+)\s+do:\s*(.+)')
+
 def do_it(what):
-	return subprocess.call(what,shell=True)
+    return subprocess.call(what,shell=True)
 
-if __name__ == '__main__':
+def usage(exit=0):
+    print """usage: para [var] in [element1 element2 element3...] do: \"[command] [var]\" 
 
-	if len(sys.argv) <= 5:
-		print """Usage: para [var] in [element1 element2 element3...] do: \"[command] [var]\" 
 Example: para %i in one two three four do: \"echo %i\" 
-
 para spawns n number of processes (set by $MAXPROCESS) in the background. Blocks until a process is done and continues to loop.
-Set $MAXPROCESS to 0 for debugging (does not execute).
-					""" 
-		sys.exit(1)
+Set $MAXPROCESS to 0 for debugging (does not execute)."""
+    sys.exit(exit)
 
-	max_processes = multiprocessing.cpu_count()
-	try:
-		max_processes = int(os.environ['MAXPROCESS'])
-	except KeyError:
-		pass
-	except ValueError:
-		print >> sys.stderr, '[para] $MAXPROCESS not valid. Setting to default (%d)' % (max_processes, )
+def max_processes():
+    """
+    Returns the number of max processes to put in background. 
+    Defaults to the number of cpu cores if env var $MAXPROCESS is not set.
+    """
+    max = multiprocessing.cpu_count()
 
-	pool = multiprocessing.Pool(max_processes)
-		
-	token_key = sys.argv[1]
-	token_values = []
+    try:
+        max = int(os.environ['MAXPROCESS'])
+    except KeyError:
+        pass
+    except ValueError:
+        print >> sys.stderr, '[para] $MAXPROCESS not valid. Setting to default (%d)' % (max,)
 
+    return max
+    
+if __name__ == '__main__':
+    m = in_expr.match(' '.join(sys.argv[1:]))
 
-	if sys.argv[2] == 'in':
-		do_from=None
-		for n,v in enumerate(sys.argv[3:]):
-			if v == 'do:':
-				token_values = sys.argv[3:3+n]
-				do_from=n
-				break
+    if not m:
+        usage(exit=1)
 
-		do_what = ' '.join(sys.argv[4+do_from:])
+    try:
+        token_key, token_values, command = m.groups()
+    except ValueError:
+        usage(exit=1)
 
-		if max_processes <= 0:
-			print >> sys.stderr, '[para debug] do:', do_what
-			print >> sys.stderr, '[para debug] on:', token_values
+    token_values = re.split('\s+', token_values)
 
-		if max_processes > 0:
-			pool.map(do_it, [do_what.replace(token_key, token_val) for token_val in token_values])	
+    maxp = max_processes()
+    if maxp <= 0:
+        print >> sys.stderr, '[para debug] do:', command
+        print >> sys.stderr, '[para debug] on:', token_values
+
+    if maxp > 0:
+        pool = multiprocessing.Pool(maxp)
+        pool.map(do_it, [command.replace(token_key, token_val) for token_val in token_values])
 
